@@ -1,0 +1,6 @@
+{
+  "report-dir": "coverage",
+  "include": ["src/**/*.{js,jsx}"],
+  "exclude": ["src/mocks/**"],
+  "all": true
+}
