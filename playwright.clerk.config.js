@@ -31,6 +31,7 @@ export default defineConfig({
     },
   ],
   globalSetup: './e2e/clerk-global-setup.js',
+  globalTeardown: './e2e/clerk-global-teardown.js',
   webServer: [
     {
       command: 'cd ../project-shield-service && ./gradlew bootRun --args="--spring.profiles.active=local"',

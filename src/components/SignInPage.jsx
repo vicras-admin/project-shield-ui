@@ -64,7 +64,10 @@ const SignInPage = ({ onBack, onSignUp, onForgotPassword, registrationData, onCl
     e.preventDefault();
 
     if (!validateForm()) return;
-    if (!isLoaded) return;
+    if (!isLoaded) {
+      setError('Authentication is still loading. Please try again in a moment.');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
@@ -130,6 +133,25 @@ const SignInPage = ({ onBack, onSignUp, onForgotPassword, registrationData, onCl
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         window.location.hash = '#dashboard';
+      } else if (result.status === 'needs_client_trust') {
+        // Client Trust: Clerk requires device verification via email/phone code.
+        // This is NOT bot protection -- it defends against credential stuffing
+        // on new/untrusted devices when the user has no MFA enabled.
+        const trustFactor = result.supportedSecondFactors?.find(
+          (factor) => factor.strategy === 'email_code' || factor.strategy === 'phone_code'
+        );
+
+        if (trustFactor) {
+          await signIn.prepareSecondFactor({
+            strategy: trustFactor.strategy,
+          });
+          setVerificationStep(true);
+          setSuccessMessage('');
+          setError('');
+          return;
+        } else {
+          setError('Device verification required but no supported verification method is available. Please contact support.');
+        }
       } else {
         console.log('Unexpected sign-in status:', result.status);
         console.log('Sign-in result:', JSON.stringify(result, null, 2));
@@ -211,9 +233,12 @@ const SignInPage = ({ onBack, onSignUp, onForgotPassword, registrationData, onCl
             emailAddressId: emailFactor.emailAddressId,
           });
         }
-      } else {
+      } else if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
+        const factor = signIn.supportedSecondFactors?.find(
+          (f) => f.strategy === 'email_code' || f.strategy === 'phone_code'
+        );
         await signIn.prepareSecondFactor({
-          strategy: 'email_code',
+          strategy: factor?.strategy || 'email_code',
         });
       }
       setSuccessMessage('Verification code resent to your email.');
